@@ -1,7 +1,10 @@
-import argparse
+# import argparse
 # from openai import OpenAI
 # from openai import AzureOpenAI
-import openai
+# import openai
+from openai import OpenAI
+
+# client = OpenAI(api_key=API_KEY)
 import environ
 from bs4 import BeautifulSoup as bs
 from ebooklib import epub
@@ -56,26 +59,24 @@ class ChatGPT:
         print(text)
         if not text.strip():
             return ''
-        openai.api_base=API_BASE
-        openai.api_key = API_KEY
-        # openai.api_base = API_BASE
-        # print(OpenAI.api_base)
+        client = OpenAI(
+                base_url=API_BASE,
+                api_key=API_KEY,
+                )
         language_to = lang_to
         language_from = lang_from
         try:
-            completion = openai.Completion.create(
-                model=API_MODEL,
+            completion = client.chat.completions.create(
                 messages=[
                     {
                         "role": "user",
                         "content": f"Translate the following text from {language_from} into {language_to}.\n {language_from}: {text}\n{language_to}:"
-                    },
+                    }
                 ],
+                model=API_MODEL,
             )
             t_text = (
-                completion["choices"][0]
-                .get("message")
-                .get("content")
+                completion.choices[0].message.content
                 .encode("utf8")
                 .decode()
             )
@@ -124,31 +125,4 @@ class TEPUB:
         epub.write_epub(f"{name}_translated.epub", new_book, {})
 
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument(
-#         "--lang_to",
-#         dest="lang_to",
-#         type=str,
-#         help="translate the epub to language",
-#     )
-#     parser.add_argument(
-#         "--lang_from",
-#         dest="lang_from",
-#         type=str,
-#         help="translate the epub from language",
-#     )
-#     parser.add_argument(
-#         "--book_name",
-#         dest="book_name",
-#         type=str,
-#         help="your epub book name",
-#     )
-#     options = parser.parse_args()
-#     if not options.book_name.endswith(".epub"):
-#         raise Exception("This program translates .epub files only.")
-#     if not options.lang_to or not options.lang_from:
-#         raise Exception("needs --lang_to and --lang_from")
-#     e = TEPUB(options.book_name, options.lang_from, options.lang_to)
-#     e.translate_book()
 
