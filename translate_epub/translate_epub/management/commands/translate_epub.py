@@ -6,6 +6,8 @@ from rich import print
 import os
 
 from django.core.management.base import BaseCommand
+from django.db.models import Q
+from translate_epub.models import Book, BookItem, BookItemElement, Language
 
 env = environ.Env()
 environ.Env.read_env()
@@ -99,18 +101,57 @@ class TEPUB:
         self.mirror = mirror
 
     def translate_book(self):
+        base_name = os.path.basename(self.epub_name)
+        name = os.path.splitext(base_name)[0]
+
+        book, created = Book.objects.get_or_create(file_name=base_name)
+
         new_book = epub.EpubBook()
         new_book.metadata = self.origin_book.metadata
         new_book.spine = self.origin_book.spine
         new_book.toc = self.origin_book.toc
-        for i in self.origin_book.get_items():
+
+        for item_index, i in enumerate(self.origin_book.get_items()):
+        # for i in self.origin_book.get_items():
             if i.get_type() == 9:
+
+                book_item, item_created = BookItem.objects.get_or_create(
+                    book=book,
+                    item_id=item_index,
+                    item_type=i.get_type(),
+                    defaults={'content': i.content}
+                )
+
                 soup = bs(i.content, "html.parser")
-                p_list = soup.findAll("p")
-                for p in p_list:
+                element_types = ['h1', 'h2', 'h3', 'h4', 'p', 'li']
+                p_list = soup.findAll(element_types)
+
+                for element_index, p in enumerate(p_list):
                     if p.text and not p.text.isdigit():
 
-                        translation = self.translate_model.translate(p.text, self.lang_from, self.lang_to)
+                        # Check if the book item element exists in the database for the specific language
+                        book_item_element = BookItemElement.objects.filter(
+                            book_item=book_item,
+                            element_id=element_index,
+                            element_type=p.name,
+                            language__name=self.lang_to
+                        ).first()
+
+                        if book_item_element:
+                            translation = book_item_element.translated_content
+                        else:
+                            # If the element doesn't exist, translate and save it to the database
+                            translation = self.translate_model.translate(p.text, self.lang_from, self.lang_to)
+                            language, _ = Language.objects.get_or_create(name=self.lang_to)
+                            book_item_element = BookItemElement.objects.create(
+                                book_item=book_item,
+                                element_id=element_index,
+                                element_type=p.name,
+                                content=p.text,
+                                translated_content=translation,
+                                language=language,
+                                complete=False
+                            )
 
                         # Split translation into lines and create HTML with <br> for line breaks
                         translation_lines = translation.split('\n')
@@ -128,15 +169,15 @@ class TEPUB:
                         else:
                             p.replace_with(new_p)
                         
-                        # new_p = soup.new_tag("p")
-                        # new_p.insert(0, new_p_contents)
 
-                        # p.insert_after(new_p)
+                book_item.content = soup.prettify().encode()
+                book_item.save()
+
                 i.content = soup.prettify().encode()
+
             new_book.add_item(i)
 
         # name = self.epub_name.split(".")[0]
-        name = os.path.splitext(os.path.basename(self.epub_name))[0]
         # epub.write_epub(f"{name}_{self.lang_from}_to_{self.lang_to}.epub", new_book, {})
         if self.mirror:
             epub.write_epub(f"{name}_{self.lang_from}_to_{self.lang_to}_mirrored.epub", new_book, {})
