@@ -1,0 +1,44 @@
+<h1>{{ book.file_name }}</h1>
+<h2>Language: {{ language.name }}</h2>
+
+<form method="GET">
+    <label>
+        <input type="checkbox" name="show_completed" {% if show_completed %}checked{% endif %}>
+        Show Completed
+    </label>
+    <button type="submit">Apply</button>
+</form>
+
+<form method="POST">
+    {% csrf_token %}
+    {% for element in page_obj %}
+        <div>
+            <h3>{{ element.element_type }}</h3>
+            <p>Original: {{ element.content }}</p>
+            <textarea name="translation_{{ element.id }}">{{ element.translated_content }}</textarea>
+            <label>
+                <input type="checkbox" name="complete_{{ element.id }}" {% if element.complete %}checked{% endif %}>
+                Mark as Complete
+            </label>
+        </div>
+    {% endfor %}
+    <button type="submit">Save Translations</button>
+</form>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1&show_completed={{ show_completed }}">&laquo; First</a>
+            <a href="?page={{ page_obj.previous_page_number }}&show_completed={{ show_completed }}">Previous</a>
+        {% endif %}
+
+        <span class="current-page">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&show_completed={{ show_completed }}">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&show_completed={{ show_completed }}">Last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
