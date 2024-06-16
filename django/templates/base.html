@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Project{% endblock %}</title>
+    <!-- Add your CSS and other head elements here -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <!-- Add your header content here -->
+        <nav>
+            <ul>
+                <li><a href="{% url 'home' %}">Home</a></li>
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'profile' %}">Profile</a></li>
+                    <li><a href="{% url 'logout' %}">Logout</a></li>
+                {% else %}
+                    <li><a href="{% url 'login' %}">Login</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}
+        <!-- Your main content goes here -->
+        {% endblock %}
+    </main>
+
+    <footer>
+        <!-- Add your footer content here -->
+        &copy; {% now 'Y' %} Translate Epub. No rights reserved.
+    </footer>
+
+    <!-- Add your JavaScript files here -->
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
