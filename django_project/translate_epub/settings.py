@@ -32,6 +32,10 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+CSRF_TRUSTED_ORIGINS = [
+    env('SITE_URL'),
+]
+
 # Application definition
 
 INSTALLED_APPS = [
