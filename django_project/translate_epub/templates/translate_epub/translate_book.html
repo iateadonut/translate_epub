@@ -15,7 +15,8 @@
         <div>
             <h3>{{ element.element_type }}</h3>
             <p>Original: {{ element.content }}</p>
-            <textarea name="translation_{{ element.id }}">{{ element.translated_content }}</textarea>
+            <textarea name="translation_{{ element.id }}" rows="4" style="width: 100%; box-sizing: border-box;" >{{ element.translated_content }}</textarea>
+			<br>
             <label>
                 <input type="checkbox" name="complete_{{ element.id }}" {% if element.complete %}checked{% endif %}>
                 Mark as Complete
