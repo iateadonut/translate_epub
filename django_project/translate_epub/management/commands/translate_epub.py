@@ -152,6 +152,9 @@ class TEPUB:
                                 language=language,
                                 complete=False
                             )
+                            
+                        # Save the translation and create a TranslationVersion entry
+                        book_item_element.save_translation(translation, is_machine_translation=True)
 
                         # Split translation into lines and create HTML with <br> for line breaks
                         translation_lines = translation.split('\n')

@@ -26,7 +26,8 @@ def translate_book(request, book_id, language_id):
         for element in page_obj:
             translation = request.POST.get(f'translation_{element.id}')
             complete = request.POST.get(f'complete_{element.id}')
-            element.translated_content = translation
+            # element.translated_content = translation
+            element.save_translation(translation, user=request.user)
             element.complete = complete == 'on'
             element.save()
 
