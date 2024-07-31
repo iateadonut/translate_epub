@@ -2,11 +2,34 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
 from .models import Book, BookItemElement, Language
+from django.urls import reverse
 
 @login_required
 def home(request):
-    # Add any necessary logic for the home view
-    return render(request, 'translate_epub/home.html')
+    books = Book.objects.all()
+    languages = Language.objects.all()
+    
+    book_data = []
+    for book in books:
+        translations = BookItemElement.objects.filter(book_item__book=book).values('language').distinct()
+        translation_count = translations.count()
+        
+        translation_links = []
+        for lang in languages:
+            if translations.filter(language=lang).exists():
+                translation_links.append({
+                    'language': lang,
+                    'url': reverse('translate_book', args=[book.id, lang.id])
+                })
+        
+        book_data.append({
+            'book': book,
+            'translation_count': translation_count,
+            'translations': translation_links
+        })
+    
+    return render(request, 'translate_epub/home.html', {'book_data': book_data})
+
 
 def translate_book(request, book_id, language_id):
     book = get_object_or_404(Book, id=book_id)
