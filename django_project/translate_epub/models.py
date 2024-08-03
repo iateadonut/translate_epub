@@ -26,6 +26,24 @@ class BookItem(models.Model):
     class Meta:
         unique_together = ('book', 'item_id')
 
+class Question(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='questions')
+    book_items = models.ManyToManyField(BookItem, related_name='questions')
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.book.file_name}"
+
+class Answer(models.Model):
+    question = models.OneToOneField(Question, on_delete=models.CASCADE, related_name='answer')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Answer to: {self.question.title}"
+
 class Language(models.Model):
     name = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)

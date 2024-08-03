@@ -41,3 +41,44 @@ class ChatGPT:
         print('Translation:')
         print(t_text)
         return t_text
+
+    def ask(self, content, question):
+        if not content.strip() or not question.strip():
+            return ''
+        
+        client = OpenAI(
+            base_url=API_BASE,
+            api_key=API_KEY,
+        )
+        
+        try:
+            completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that answers questions based on the provided content."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Here's some content:\n\n{content}\n\nPlease answer the following question based on this content:\n\n{question}"
+                    }
+                ],
+                model=API_MODEL,
+            )
+            
+            answer = (
+                completion.choices[0].message.content
+                .encode("utf8")
+                .decode()
+            )
+            
+            print('Question:', question)
+            print('Answer:', answer)
+            
+            return answer
+        
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            return f"An error occurred while processing your request: {str(e)}"
+
+

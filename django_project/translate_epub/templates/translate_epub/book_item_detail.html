@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book_item.book.file_name }} - Item {{ book_item.item_id }}</title>
+    <style>
+        .question-section {
+            margin-bottom: 20px;
+        }
+        .question {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ book_item.book.file_name }} - Item {{ book_item.item_id }}</h1>
+    <h2>{{ book_item.heading }}</h2>
+    <h3>{{ book_item.subheading }}</h3>
+    <p>{{ book_item.content }}</p>
+
+    <h2>Single Item Questions</h2>
+    <div class="question-section">
+        {% for question in single_questions %}
+            <div class="question">
+                <h3>{{ question.title }}</h3>
+                <p><strong>Question:</strong> {{ question.content }}</p>
+                <p><strong>Answer:</strong> {{ question.answer.content }}</p>
+            </div>
+        {% empty %}
+            <p>No single item questions available.</p>
+        {% endfor %}
+    </div>
+
+    <h2>Group Questions</h2>
+    <div class="question-section">
+        {% for question in group_questions %}
+            <div class="question">
+                <h3>{{ question.title }}</h3>
+                <p><strong>Question:</strong> {{ question.content }}</p>
+                <p><strong>Answer:</strong> {{ question.answer.content }}</p>
+                <p><em>This question is part of a group of items.</em></p>
+            </div>
+        {% empty %}
+            <p>No group questions available.</p>
+        {% endfor %}
+    </div>
+</body>
+</html>

@@ -32,7 +32,7 @@
         <tbody>
             {% for item in book_data %}
             <tr>
-                <td>{{ item.book.file_name }}</td>
+				<td><a href="{{ item.detail_url }}">{{ item.book.file_name }}</a></td>
                 <td>{{ item.translation_count }}</td>
                 <td>
                     {% for translation in item.translations %}

@@ -21,6 +21,9 @@ from . import views
 urlpatterns = [
     path('translate_book/<int:book_id>/<int:language_id>/', views.translate_book, name='translate_book'),
     path('', views.home, name='home'),
+    path('book/<int:book_id>/', views.book_detail, name='book_detail'),
+    path('book/<int:book_id>/ask_question/', views.ask_question, name='ask_question'),
+    path('book_item/<int:item_id>/', views.book_item_detail, name='book_item_detail'),
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
 ]

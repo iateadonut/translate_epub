@@ -1,8 +1,11 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
-from .models import Book, BookItemElement, Language
+from django.db.models import Count, Q
+from .models import Book, BookItem, Question, Answer, BookItemElement, Language
 from django.urls import reverse
+from .chatgpt import ChatGPT
+
 
 @login_required
 def home(request):
@@ -25,7 +28,8 @@ def home(request):
         book_data.append({
             'book': book,
             'translation_count': translation_count,
-            'translations': translation_links
+            'translations': translation_links,
+            'detail_url': reverse('book_detail', args=[book.id]),
         })
     
     return render(request, 'translate_epub/home.html', {'book_data': book_data})
@@ -61,4 +65,67 @@ def translate_book(request, book_id, language_id):
         'show_completed': show_completed,
     }
     return render(request, 'translate_epub/translate_book.html', context)
+
+
+def book_detail(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    book_items = book.items.all().order_by('item_id')
+    return render(request, 'translate_epub/book_detail.html', {'book': book, 'book_items': book_items})
+
+def book_item_detail(request, item_id):
+    book_item = get_object_or_404(BookItem, id=item_id)
+    
+    # Get all questions related to this book item
+    questions = Question.objects.filter(book_items=book_item)
+    
+    # Annotate questions with the count of related book items
+    questions = questions.annotate(item_count=Count('book_items'))
+    
+    # Separate single questions and group questions
+    single_questions = questions.filter(item_count=1)
+    group_questions = questions.filter(item_count__gt=1)
+
+    context = {
+        'book_item': book_item,
+        'single_questions': single_questions,
+        'group_questions': group_questions,
+    }
+    return render(request, 'translate_epub/book_item_detail.html', context)
+
+
+def ask_question(request, book_id):
+    if request.method == 'POST':
+        book = get_object_or_404(Book, id=book_id)
+        selected_items = request.POST.getlist('selected_items')
+        question_title = request.POST.get('question_title')
+        question_content = request.POST.get('question_content')
+
+        # Create a new Question object
+        question = Question.objects.create(
+            book=book,
+            title=question_title,
+            content=question_content
+        )
+
+        # Associate selected BookItems with the Question
+        book_items = BookItem.objects.filter(id__in=selected_items)
+        question.book_items.set(book_items)
+
+        # Prepare content for AI processing
+        content = "\n".join([item.content for item in book_items])
+
+        # Use ChatGPT to generate an answer
+        chatgpt = ChatGPT()
+        ai_response = chatgpt.ask(content, question_content)
+
+        # Create a new Answer object
+        Answer.objects.create(
+            question=question,
+            content=ai_response
+        )
+
+        return redirect(reverse('book_item_detail', args=[book_items[0].id]))
+
+    return redirect(reverse('book_detail', args=[book_id]))
+
 
