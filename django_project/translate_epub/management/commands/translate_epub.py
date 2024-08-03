@@ -1,5 +1,6 @@
 from openai import OpenAI
 import environ
+import re
 from bs4 import BeautifulSoup as bs
 from ebooklib import epub
 from rich import print
@@ -100,6 +101,60 @@ class TEPUB:
         self.lang_to = lang_to
         self.mirror = mirror
 
+    def get_item_info(self, item):
+        info = {
+            'id': item.id,
+            'file_name': item.file_name,
+            'media_type': item.media_type,
+            'is_linear': item.is_linear,
+            'manifest': item.manifest,
+            'type': item.get_type(),
+        }
+        
+        # Check if it might be a chapter
+        is_chapter = False
+        heading = None
+        subheading = None
+        if info['type'] == 9:  # ITEM_DOCUMENT
+            content = item.content.decode('utf-8')
+            content_lower = content.lower()
+            # print(content)
+            
+            # Extract the content of the first h1 tag
+            soup = bs(content, 'html.parser')
+            first_h1 = soup.find('h1')
+            if first_h1:
+                heading = first_h1.get_text(strip=True)
+            first_h2 = soup.find('h2')
+            if first_h2:
+                subheading = first_h2.get_text(strip=True)
+
+            # Check if 'chapter' is in the heading or subheading
+            if (heading and 'chapter' in heading.lower()) or (subheading and 'chapter' in subheading.lower()):
+                is_chapter = True
+            else:
+                # Exclude common non-chapter items
+                excluded_terms = ['table of contents']
+                if any(term in info['file_name'].lower() or term in content_lower for term in excluded_terms):
+                    is_chapter = False
+                elif 'chapter' in info['file_name'].lower() or 'chapter' in info['id'].lower():
+                    is_chapter = True
+                else:
+                    # Check content for chapter indicators
+                    chapter_indicators = [
+                        r'<h\d[^>]*>chapter',  # <h1>Chapter, <h2>Chapter, etc.
+                        r'<h\d[^>]*>\s*\d+',   # <h1>1, <h2>2, etc.
+                        r'class=["\']chapter'  # class="chapter-title", etc.
+                    ]
+                    if any(re.search(pattern, content_lower) for pattern in chapter_indicators):
+                        is_chapter = True
+
+        info['is_chapter'] = is_chapter
+        info['heading'] = heading
+        info['subheading'] = subheading
+        
+        return info
+
     def translate_book(self):
         base_name = os.path.basename(self.epub_name)
         name = os.path.splitext(base_name)[0]
@@ -112,15 +167,34 @@ class TEPUB:
         new_book.toc = self.origin_book.toc
 
         for item_index, i in enumerate(self.origin_book.get_items()):
-        # for i in self.origin_book.get_items():
+
+            item_info = self.get_item_info(i)
+            print(f"Item {item_index}:")
+            for key, value in item_info.items():
+                print(f"  {key}: {value}")
+            print()
+
             if i.get_type() == 9:
 
                 book_item, item_created = BookItem.objects.get_or_create(
                     book=book,
                     item_id=item_index,
                     item_type=i.get_type(),
-                    defaults={'content': i.content}
+                    defaults={
+                        'content': i.content,
+                        'heading': item_info.get('heading', ''),
+                        'subheading': item_info.get('subheading', ''),
+                        'is_chapter': item_info.get('is_chapter', False)
+                    }
                 )
+
+                # this can be used to correct old errors in content saving;
+                #this can/should be deleted later
+                book_item.content = i.content
+                book_item.heading = item_info.get('heading', '')
+                book_item.subheading = item_info.get('subheading', '')
+                book_item.is_chapter = item_info.get('is_chapter', False)
+                book_item.save()
 
                 soup = bs(i.content, "html.parser")
                 element_types = ['h1', 'h2', 'h3', 'h4', 'p', 'li']
@@ -172,9 +246,6 @@ class TEPUB:
                         else:
                             p.replace_with(new_p)
                         
-
-                book_item.content = soup.prettify().encode()
-                book_item.save()
 
                 i.content = soup.prettify().encode()
 
