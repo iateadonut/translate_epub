@@ -11,7 +11,7 @@ class Book(models.Model):
 
 class BookItem(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='items')
-    item_id = models.IntegerField()
+    item_id = models.CharField(max_length=255)
     item_type = models.IntegerField()
     content = models.TextField()
     heading = models.CharField(max_length=255, null=True, blank=True)

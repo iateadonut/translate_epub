@@ -5,11 +5,17 @@ from bs4 import BeautifulSoup as bs
 from ebooklib import epub
 from rich import print
 import os
+from django.db import transaction
+import zipfile
+import xml.etree.ElementTree as ET
+
 
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 from translate_epub.models import Book, BookItem, BookItemElement, Language
 from translate_epub.chatgpt import ChatGPT
+from translate_epub.idml_handler import IDMLParser, IDMLWriter
+
 
 env = environ.Env()
 environ.Env.read_env()
@@ -19,7 +25,7 @@ API_KEY = env('API_KEY')
 API_MODEL = env('API_MODEL')
 
 class Command(BaseCommand):
-    help = 'Translates an .epub'
+    help = 'Translates an .epub or .idml file'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -45,16 +51,53 @@ class Command(BaseCommand):
             action='store_true',
             help='keep both original and translated paragraphs',
         )
+        parser.add_argument('--debug', action='store_true', help='print debug information')
 
     def handle(self, *args, **options):
-        if not options['book_name'].endswith('.epub'):
-            raise Exception('This program translates .epub files only.')
+        if not options['book_name'].endswith(('.epub', '.idml')):
+            raise Exception('This program translates .epub and .idml files only.')
         if not options['lang_to'] or not options['lang_from']:
             raise Exception('needs --lang_to and --lang_from')
+        
+        file_extension = os.path.splitext(options['book_name'])[1]
+        
+        if file_extension == '.epub':
+            self.translate_epub(options)
+        elif file_extension == '.idml':
+            self.translate_idml(options)
+
+    def translate_epub(self, options):
         mirror = options.get('mirror', False)
         e = TEPUB(options['book_name'], options['lang_from'], options['lang_to'], mirror)
         e.translate_book()
 
+    def translate_idml(self, options):
+        self.stdout.write(self.style.WARNING('Starting IDML translation...'))
+        
+        idml_parser = IDMLParser(options['book_name'], options['lang_from'], options['lang_to'])
+        idml_parser.parse()
+
+        self.stdout.write(self.style.SUCCESS('IDML file parsed and translations saved/updated.'))
+
+        output_file = f"{os.path.splitext(options['book_name'])[0]}_{options['lang_from']}_to_{options['lang_to']}.idml"
+        idml_writer = IDMLWriter(options['book_name'], output_file, options['lang_to'])
+        idml_writer.write()
+
+        self.stdout.write(self.style.SUCCESS(f'Successfully created translated IDML file: {output_file}'))
+
+    def print_idml_structure(self, file_path):
+        with zipfile.ZipFile(file_path, 'r') as zip_ref:
+            for file_name in zip_ref.namelist():
+                if file_name.startswith('Stories/Story_') and file_name.endswith('.xml'):
+                    self.stdout.write(f"\nStructure of {file_name}:")
+                    story_content = zip_ref.read(file_name)
+                    root = ET.fromstring(story_content)
+                    self.print_xml_structure(root)
+
+    def print_xml_structure(self, element, level=0):
+        self.stdout.write('  ' * level + f"{element.tag}: {element.attrib}")
+        for child in element:
+            self.print_xml_structure(child, level + 1)
 
 class TEPUB:
     def __init__(self, epub_name, lang_from, lang_to, mirror=False):
