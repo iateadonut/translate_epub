@@ -47,23 +47,20 @@ class IDMLParser:
     def process_element(self, element, book_item, element_counter=0):
         element_counter = int(element_counter)
         if element.tag.endswith('Content'):
-            content = element.text
-            if content and content.strip():
-                element_counter += 1
-                book_item_element, created = BookItemElement.objects.get_or_create(
-                    book_item=book_item,
-                    element_id=str(element_counter),
-                    language=Language.objects.get(name=self.lang_to),
-                    defaults={'content': content.strip()}
-                )
-                
-                if created or not book_item_element.translated_content:
-                    translation = self.translate_model.translate(content.strip(), self.lang_from, self.lang_to)
-                    book_item_element.save_translation(translation, is_machine_translation=True)
-
+            content = element.text if element.text is not None else ""
+            element_counter += 1
+            book_item_element, created = BookItemElement.objects.get_or_create(
+                book_item=book_item,
+                element_id=str(element_counter),
+                language=Language.objects.get(name=self.lang_to),
+                defaults={'content': content}
+            )
+            
+            if created or not book_item_element.translated_content:
+                translation = self.translate_model.translate(content, self.lang_from, self.lang_to)
+                book_item_element.save_translation(translation, is_machine_translation=True)
         for child in element:
             element_counter = self.process_element(child, book_item, element_counter)
-
         return element_counter
 
 class IDMLWriter:

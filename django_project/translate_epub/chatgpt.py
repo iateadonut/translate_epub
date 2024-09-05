@@ -1,5 +1,6 @@
 from openai import OpenAI
 import environ
+import re
 
 env = environ.Env()
 environ.Env.read_env()
@@ -14,6 +15,11 @@ class ChatGPT:
         print(text)
         if not text.strip():
             return ''
+
+        if re.match(r'^[\d\s\-\?]*$', text):
+            print('Text contains only digits and allowed punctuation. Returning original.')
+            return text
+
         client = OpenAI(
                 base_url=API_BASE,
                 api_key=API_KEY,
