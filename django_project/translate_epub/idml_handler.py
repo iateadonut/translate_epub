@@ -53,7 +53,7 @@ class IDMLParser:
                 book_item_element, created = BookItemElement.objects.get_or_create(
                     book_item=book_item,
                     element_id=str(element_counter),
-                    language=Language.objects.get(name=self.lang_from),
+                    language=Language.objects.get(name=self.lang_to),
                     defaults={'content': content.strip()}
                 )
                 
