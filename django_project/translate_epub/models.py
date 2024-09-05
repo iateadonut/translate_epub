@@ -38,7 +38,7 @@ class Question(models.Model):
 
 class Answer(models.Model):
     question = models.OneToOneField(Question, on_delete=models.CASCADE, related_name='answer')
-    content = models.TextField()
+    content = models.TextField(db_collation='utf8mb4_unicode_ci')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -121,5 +121,4 @@ class BookItemElement(models.Model):
             is_machine_translation=is_machine_translation
         )
         return new_version
-
 
