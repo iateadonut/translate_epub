@@ -4,7 +4,7 @@ usage: python ./manage.py translate_epub --book=./translate_epub/test_data/14-te
 
 ### What this does
 
-This program queries a LLM in order to translate an epub, and then recompiles the epub in the translated language.
+This program queries a LLM in order to translate an epub or idml, and then recompiles the epub in the translated language.
 
 It also saves each element's translation in a database, so that, if the process is interrupted, you can start it again and it will simply pull from the database instead of asking the LLM for a translation.
 
