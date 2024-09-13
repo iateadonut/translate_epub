@@ -9,24 +9,24 @@
     <button type="submit">Apply</button>
 </form>
 
-<form method="POST">
-    {% csrf_token %}
-    {% for element in page_obj %}
-        <div>
-            <h3>{{ element.element_type }}</h3>
-            <p>Original: {{ element.content }}</p>
-            <textarea name="translation_{{ element.id }}" rows="4" style="width: 100%; box-sizing: border-box;" >{{ element.translated_content }}</textarea>
-			<br>
-            <label>
-                <input type="checkbox" name="complete_{{ element.id }}" {% if element.complete %}checked{% endif %}>
-                Mark as Complete
-            </label>
-        </div>
-    {% endfor %}
-    <button type="submit">Save Translations</button>
-</form>
+{% csrf_token %}
+
+{% for element in page_obj %}
+    <div class="element" data-element-id="{{ element.id }}">
+        <h3>{{ element.element_type }}</h3>
+        <p>Original: {{ element.content }}</p>
+        <textarea name="translation" rows="4" style="width: 100%; box-sizing: border-box;">{{ element.translated_content }}</textarea>
+        <br>
+        <label>
+            <input type="checkbox" name="complete" {% if element.complete %}checked{% endif %}>
+            Mark as Complete
+        </label>
+        <button class="save-element-btn">Save</button>
+    </div>
+{% endfor %}
 
 <div class="pagination">
+    <!-- Your existing pagination code -->
     <span class="step-links">
         {% if page_obj.has_previous %}
             <a href="?page=1&show_completed={{ show_completed }}">&laquo; First</a>
@@ -43,3 +43,77 @@
         {% endif %}
     </span>
 </div>
+
+<!-- Include jQuery (if not already included) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    var showCompleted = {% if show_completed %}true{% else %}false{% endif %};
+
+// CSRF token setup for AJAX
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+var csrftoken = getCookie('csrftoken');
+
+
+$(document).ready(function() {
+	$('.save-element-btn').click(function(e) {
+		e.preventDefault();
+		var elementDiv = $(this).closest('.element');
+		var elementId = elementDiv.data('element-id');
+		var translation = elementDiv.find('textarea[name="translation"]').val();
+		var complete = elementDiv.find('input[name="complete"]').is(':checked');
+
+		$.ajax({
+			url: "{% url 'update_element' 0 %}".replace('/0/', '/' + elementId + '/'),
+			type: 'POST',
+			headers: { 'X-CSRFToken': csrftoken },
+			data: {
+				'translation': translation,
+				'complete': complete,
+			},
+			success: function(response) {
+				if (response.success) {
+					if (!showCompleted && response.complete) {
+						// Briefly highlight the element before removal
+						elementDiv.css('background-color', '#ffcccc'); // Light red background
+						setTimeout(function() {
+							elementDiv.slideUp('slow', function() {
+								$(this).remove();
+							});
+						}, 500); // Wait half a second before removing
+					} else {
+						// Optionally, provide user feedback
+						elementDiv.css('background-color', '#e6ffe6'); // Light green background
+						// Fade back to original background after a short delay
+						setTimeout(function() {
+							elementDiv.css('background-color', '');
+						}, 2000);
+					}
+				} else {
+					alert('Error saving element.');
+				}
+			},
+			error: function(xhr, errmsg, err) {
+				console.error(xhr.status + ": " + xhr.responseText);
+				alert('An error occurred while saving. Please try again.');
+			}
+		});
+	});
+});
+
+</script>
+

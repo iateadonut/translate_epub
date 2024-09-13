@@ -6,6 +6,9 @@ from .models import Book, BookItem, Question, Answer, BookItemElement, Language
 from django.urls import reverse
 from .chatgpt import ChatGPT
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
 
 @login_required
 def home(request):
@@ -34,6 +37,21 @@ def home(request):
     
     return render(request, 'translate_epub/home.html', {'book_data': book_data})
 
+@login_required
+@require_POST
+def update_element(request, element_id):
+    element = get_object_or_404(BookItemElement, id=element_id)
+    translation = request.POST.get('translation', '').strip()
+    complete = request.POST.get('complete') == 'true'
+
+    # Save the translation and completion status
+    element.save_translation(translation, user=request.user)
+    element.complete = complete
+    element.save()
+
+    return JsonResponse({'success': True, 'complete': element.complete})
+    # Return a JSON response indicating success
+    # return JsonResponse({'success': True})
 
 def translate_book(request, book_id, language_id):
     book = get_object_or_404(Book, id=book_id)

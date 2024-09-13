@@ -26,4 +26,6 @@ urlpatterns = [
     path('book_item/<int:item_id>/', views.book_item_detail, name='book_item_detail'),
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
+
+    path('update_element/<int:element_id>/', views.update_element, name='update_element'),
 ]
